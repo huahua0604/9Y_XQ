@@ -1,0 +1,9 @@
+package com.hospital.req.entity;
+
+public enum HistoryAction {
+    CREATE_DRAFT, SUBMIT,
+    ADMIN_APPROVE, ADMIN_REJECT,
+    REVIEW_APPROVE, REVIEW_REJECT,
+    COMMENT_ADDED, ATTACHMENT_ADDED, EDIT,
+    ATTACHMENT_DELETED, COMMENT_DELETED
+}
