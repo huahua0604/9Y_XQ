@@ -4,7 +4,7 @@
       <h2 class="mb-0">新建需求</h2>
     </div>
 
-    <form @submit.prevent="onSubmit" class="needs-validation" novalidate>
+    <form @submit.prevent="onSubmit" class="needs-validation">
       <div class="card shadow-sm mb-4">
         <div class="card-body">
           <div class="row g-3">
@@ -23,32 +23,13 @@
             <!-- 申请类型 -->
             <div class="col-12 col-md-6">
               <label class="form-label">申请类型<span class="text-danger">*</span></label>
-              <select v-model="f.category" class="form-select">
-                <option>临时</option><option>常态化(如:周报,月报等)</option>
+              <select v-model="f.category" class="form-select" required>
+                <option>临时</option>
+                <option>周报</option>
+                <option>月报</option>
                 <option>其他</option>
               </select>
             </div>
-            <!-- 期望完成日期 -->
-            <!-- <div class="col-12 col-md-6">
-              <label class="form-label">期望完成日期</label>
-              <input type="date" v-model="f.desiredDueDate" class="form-control" />
-            </div> -->
-
-            <!-- 预算预估 -->
-            <!-- <div class="col-12 col-md-6">
-              <label class="form-label">预算预估(元)</label>
-              <div class="input-group">
-                <input
-                  type="number"
-                  step="0.01"
-                  v-model.number="f.budgetEstimate"
-                  class="form-control"
-                  placeholder="例如:10000"
-                />
-                <span class="input-group-text">CNY</span>
-              </div>
-            </div> -->
-
             <!-- 影响范围 -->
             <div class="col-12 col-md-6">
               <label class="form-label">影响范围</label>
@@ -56,17 +37,10 @@
                 <option>个人</option><option>本科室</option><option>跨科室</option><option>全院</option>
               </select>
             </div>
-
-            <!-- 关联系统/设备 -->
-            <!-- <div class="col-12 col-md-6">
-              <label class="form-label">关联系统/设备</label>
-              <input v-model="f.relatedSystems" class="form-control" placeholder="例如：HIS、PACS、某型号设备…" />
-            </div> -->
-
             <!-- 联系电话 -->
             <div class="col-12 col-md-6">
-              <label class="form-label">联系电话</label>
-              <input v-model="f.contactPhone" class="form-control" placeholder="手机号或座机" />
+              <label class="form-label">联系电话<span class="text-danger">*</span></label>
+              <input v-model="f.contactPhone" class="form-control" placeholder="可不填，系统默认为个人手机号" />
             </div>
 
             <!-- 地点/科室 -->
@@ -104,9 +78,6 @@
 
       <!-- 动作区 -->
       <div class="d-flex justify-content-end gap-2">
-        <button type="button" class="btn btn-outline-secondary" @click="saveDraft">
-          保存草稿
-        </button>
         <button class="btn btn-primary">
           提交审批
         </button>
@@ -132,10 +103,7 @@ function onPickFiles(e: Event){
   const files = (e.target as HTMLInputElement).files
   picked.value = files ? Array.from(files) : []
 }
-async function saveDraft(){
-  f.submit = false
-  await create()
-}
+
 async function onSubmit(){
   f.submit = true
   await create()

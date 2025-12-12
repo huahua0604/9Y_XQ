@@ -66,7 +66,8 @@ public class AdminController {
             String name,
             String department,
             boolean mustChangePassword,
-            List<String> roles
+            List<String> roles,
+            String phone
     ) {
         public static UserListItem from(User u) {
             return new UserListItem(
@@ -75,7 +76,8 @@ public class AdminController {
                     u.getName(),
                     u.getDepartment(),
                     u.isMustChangePassword(),
-                    u.getRoles().stream().map(Enum::name).toList()
+                    u.getRoles().stream().map(Enum::name).toList(),
+                    u.getPhone()
             );
         }
     }

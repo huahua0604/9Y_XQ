@@ -18,7 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.List;
 
-import java.net.URLEncoder;
+// import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 
@@ -31,9 +31,6 @@ public class FilesController {
     private final StoragePathResolver storagePathResolver;
     private final DemandService service;
     private static final Logger log = LoggerFactory.getLogger(FilesController.class);
-
-    // private final String uploadDirRoot = Paths.get("./data/uploads")
-    //         .toAbsolutePath().normalize().toString();
 
     @GetMapping("/{id}/meta")
     @PreAuthorize("isAuthenticated()")
@@ -60,7 +57,6 @@ public class FilesController {
     private ResponseEntity<FileSystemResource> serve(Long id, boolean asAttachment) {
     Attachment a = attRepo.findById(id).orElseThrow();
 
-    // 如果是软删除且文件已不存在，直接告知客户端 410
     Path resolved = resolveExistingFile(a);
     if (resolved == null) {
         if (a.isDeleted()) {
@@ -70,7 +66,6 @@ public class FilesController {
                 HttpStatus.NOT_FOUND, "文件不存在");
     }
 
-    // content type
     String contentType = a.getContentType();
     try {
         if (contentType == null || contentType.isBlank()) {
@@ -90,7 +85,7 @@ public class FilesController {
     }
 
     private Path resolveExistingFile(Attachment a) {
-        Path root = storagePathResolver.root();                   // e.g. {workdir}/data/uploads
+        Path root = storagePathResolver.root();
         String raw = Optional.ofNullable(a.getStoragePath()).orElse("").replace('\\','/').trim();
         String storedName = Optional.ofNullable(a.getStoredFilename()).orElse("").trim();
 
@@ -99,26 +94,24 @@ public class FilesController {
         if (!raw.isEmpty()) {
             Path p = Paths.get(raw);
             if (p.isAbsolute()) {
-                candidates.add(p.normalize());                    // 老数据：绝对路径
+                candidates.add(p.normalize());
             } else {
-                Path base = root.resolve(p).normalize();         // 相对到 root
-                candidates.add(base);                             // 假设 raw 已含文件名
+                Path base = root.resolve(p).normalize();
+                candidates.add(base);
                 if (!storedName.isEmpty() && !raw.endsWith("/" + storedName) && !raw.equals(storedName)) {
-                    candidates.add(base.resolve(storedName).normalize()); // raw 只是目录
+                    candidates.add(base.resolve(storedName).normalize());
                 }
             }
         }
-        // 兜底：demands/{reqId}/{stored}
+
         if (!storedName.isEmpty() && a.getRequest() != null && a.getRequest().getId() != null) {
             candidates.add(root.resolve("demands")
                             .resolve(String.valueOf(a.getRequest().getId()))
                             .resolve(storedName).normalize());
         }
 
-        // 安全与存在性检查
         for (Path c : candidates) {
             try {
-                // 仅允许 root 下（绝对路径也应位于 root 内，避免越权）
                 if (!c.startsWith(root)) {
                     log.warn("Reject path outside root. id={}, path={}, root={}", a.getId(), c, root);
                     continue;
@@ -132,17 +125,14 @@ public class FilesController {
             }
         }
 
-        // 未找到时，打印一下关键信息便于你排查（不会泄露给前端）
         log.warn("File not found. id={}, storagePath='{}', stored='{}', root={}",
                 a.getId(), raw, storedName, root);
         return null;
     }
 
-
-
     private static ContentDisposition buildContentDisposition(boolean attachment, String filename) {
         String safe = (filename == null || filename.isBlank()) ? "file" : filename;
-        String encoded = URLEncoder.encode(safe, StandardCharsets.UTF_8).replaceAll("\\+", "%20");
+        // String encoded = URLEncoder.encode(safe, StandardCharsets.UTF_8).replaceAll("\\+", "%20");
         return ContentDisposition.builder(attachment ? "attachment" : "inline")
                 .filename(safe, StandardCharsets.UTF_8)
                 .build();

@@ -1,40 +1,40 @@
 import { defineStore } from 'pinia'
 
 const STORAGE_KEY = 'auth/v1'
+const LOGOUT_BROADCAST_KEY = 'auth/logout-broadcast'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: '',
-    user: null,                 // { employeeId, name, department, roles: [] }
-    exp: 0,                     // JWT 过期时间（unix秒）
-    mustChangePassword: false
+    user: null,
+    exp: 0,                 
+    mustChangePassword: false,
+    _boundStorageListener: false,
   }),
 
   getters: {
-    // 路由守卫用：是否已登录（且未过期）
     isAuthed: (s) => !!s.token && (!s.exp || s.exp * 1000 > Date.now()),
-    // 路由守卫用：角色数组（直接 auth.roles.includes('ADMIN')）
     roles:   (s) => Array.isArray(s?.user?.roles) ? s.user.roles : [],
     employeeId: (s) => s.user?.employeeId || '',
     displayName: (s) => s.user?.name || ''
   },
 
   actions: {
-    // 刷新/启动时恢复本地会话
     hydrate () {
       try {
         const raw = localStorage.getItem(STORAGE_KEY)
-        if (!raw) return
-        const data = JSON.parse(raw)
-        this.token = data.token || ''
-        this.user  = data.user  || null
-        this.exp   = data.exp   || 0
-        this.mustChangePassword = !!data.mustChangePassword
-        // 已过期则清空
-        if (this.exp && this.exp * 1000 <= Date.now()) this.clear()
+        if (raw) {
+          const data = JSON.parse(raw)
+          this.token = data.token || ''
+          this.user  = data.user  || null
+          this.exp   = data.exp   || 0
+          this.mustChangePassword = !!data.mustChangePassword
+        }
       } catch (e) {
         console.warn('auth hydrate failed', e)
       }
+      if (this.exp && this.exp * 1000 <= Date.now()) this.clear()
+      this._bindCrossTabLogout()
     },
 
     /**
@@ -48,7 +48,7 @@ export const useAuthStore = defineStore('auth', {
       this.user  = normalizeUser(user)
       const payload = parseJwt(token)
       this.exp   = payload?.exp || 0
-      this.mustChangePassword = !!opts.mustChangePassword
+      this.mustChangePassword = !!(opts?.mustChangePassword)
       persist(this.$state)
     },
 
@@ -67,22 +67,45 @@ export const useAuthStore = defineStore('auth', {
       this.user  = null
       this.exp   = 0
       this.mustChangePassword = false
-      localStorage.removeItem(STORAGE_KEY)
+      try { localStorage.removeItem(STORAGE_KEY) } catch {}
+    },
+
+    logout () {
+      this.clear()
+      try {
+        localStorage.setItem(LOGOUT_BROADCAST_KEY, String(Date.now()))
+        localStorage.removeItem(LOGOUT_BROADCAST_KEY)
+      } catch {}
     },
 
     hasAuthority (role) {
       return this.roles.includes(role)
-    }
+    },
+
+    /** 内部：跨标签页同步登出 */
+    _bindCrossTabLogout () {
+      if (this._boundStorageListener) return
+      if (typeof window === 'undefined') return
+      const handler = (e) => {
+        if (e.key === LOGOUT_BROADCAST_KEY) {
+          this.clear()
+        }
+      }
+      window.addEventListener('storage', handler)
+      this._boundStorageListener = true
+    },
   }
 })
 
 function persist (state) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({
-    token: state.token,
-    user: state.user,
-    exp: state.exp,
-    mustChangePassword: state.mustChangePassword
-  }))
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      token: state.token,
+      user: state.user,
+      exp: state.exp,
+      mustChangePassword: state.mustChangePassword
+    }))
+  } catch {}
 }
 
 function normalizeUser (u) {
@@ -94,7 +117,8 @@ function normalizeUser (u) {
     employeeId: u.employeeId || u.empId || u.username || '',
     name:       u.name || u.fullName || '',
     department: u.department || u.dept || '',
-    roles
+    roles,
+    phone: u.phone || u.mobile || '',
   }
 }
 

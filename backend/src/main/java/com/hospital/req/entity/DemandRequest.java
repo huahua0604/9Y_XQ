@@ -1,10 +1,9 @@
 package com.hospital.req.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter; import lombok.Setter;
+import lombok.Getter; 
+import lombok.Setter;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -20,14 +19,6 @@ public class DemandRequest {
     @Column(length=40)
     private String category;
 
-    @Enumerated(EnumType.STRING)
-    private Priority priority = Priority.MEDIUM;
-
-    private LocalDate desiredDueDate;
-
-    @Column(precision=12, scale=2)
-    private BigDecimal budgetEstimate;
-
     @Column(length=40)
     private String impactScope; // 个人/本科室/跨科室/全院
 
@@ -40,7 +31,7 @@ public class DemandRequest {
     @Column(length=100)
     private String location;
 
-    @Lob
+    @Lob @Column(columnDefinition="MEDIUMTEXT")
     private String description;
 
     @ManyToOne(optional=false)

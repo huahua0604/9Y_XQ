@@ -14,32 +14,25 @@ import java.util.function.Function;
 
 @Service
 public class JwtService {
-
-    // 建议配置在 application.yml，这里先写死方便你跑通
     private static final String SECRET_KEY = "MySuperSecretKeyForJwtGenerationMySuperSecretKeyForJwtGeneration";
 
-    /** 生成 Token */
     public String generateToken(UserDetails userDetails) {
         return Jwts.builder()
-                .setSubject(userDetails.getUsername()) // 工号
+                .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24)) // 24 小时
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24))
                 .signWith(getSignKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    /** 从 Token 提取用户名 */
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
-    /** 校验 Token */
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
         return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
     }
-
-    // ========= 私有方法 =========
 
     private boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());

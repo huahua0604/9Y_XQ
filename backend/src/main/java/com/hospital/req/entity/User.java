@@ -30,6 +30,9 @@ public class User {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    @Column(length = 20, unique = true)
+    private String phone;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
     @CollectionTable(name="user_roles", joinColumns=@JoinColumn(name="user_id"))

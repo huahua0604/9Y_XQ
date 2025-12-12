@@ -33,13 +33,39 @@ export function addComment(id, content){
 export function deleteComment(commentId) {
   return axios.delete(`/api/demands/comments/${commentId}`).then(r => r.data)
 }
-export function uploadAttachment(id, file, occurredAt){
+export function uploadAttachment(id, file, { note = '', occurredAt = '' } = {}) {
   const fd = new FormData()
   fd.append('file', file)
   if (occurredAt) fd.append('occurredAt', occurredAt)
-  return axios.post(`/api/demands/${id}/attachments`, fd).then(r => r.data)
+  if (note) fd.append('note', note)
+  return axios.post(`/api/demands/${id}/attachments`, fd, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }).then(r => r.data)
 }
 export function deleteAttachment(attId) {
   return axios.delete(`/api/files/${attId}`).then(r => r.data)
 }
-
+export function markCompleted(id, note) {
+  return axios.post(`/api/demands/${id}/complete`, note ? { note } : {}).then(r => r.data)
+}
+export function unmarkCompleted(id, note) {
+  return axios.post(`/api/demands/${id}/complete/undo`, note ? { note } : {}).then(r => r.data)
+}
+export function markWeekDone(id, key, label) {
+  return axios.post(`/api/demands/${id}/done/week`, { key, label }).then(r => r.data)
+}
+export function unmarkWeekDone(id, key, label) {
+  return axios.post(`/api/demands/${id}/done/week/undo`, { key, label }).then(r => r.data)
+}
+export function markMonthDone(id, key, label) {
+  return axios.post(`/api/demands/${id}/done/month`, { key, label }).then(r => r.data)
+}
+export function unmarkMonthDone(id, key, label) {
+  return axios.post(`/api/demands/${id}/done/month/undo`, { key, label }).then(r => r.data)
+}
+export function updateDemandTitle(id, title) {
+  return axios.put(`/api/demands/${id}/title`, { title }).then(r => r.data)
+}
+export function sendDemandSms(id, bizInfo, amount) {
+  return axios.post(`/api/demands/${id}/sms/notify`, { bizInfo, amount }).then(r => r.data)
+}

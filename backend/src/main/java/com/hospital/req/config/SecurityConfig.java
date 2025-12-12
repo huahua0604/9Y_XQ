@@ -36,8 +36,7 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration cfg) throws Exception {
         return cfg.getAuthenticationManager();
     }
-
-    /** 用工号 employeeId 作为用户名 */
+    
     @Bean
     public UserDetailsService userDetailsService(UserRepository userRepo) {
         return (String username) -> {
@@ -62,22 +61,18 @@ public class SecurityConfig {
     ) throws Exception {
 
         http
-            // CORS 一定要启用并指向上面的 CorsConfigurationSource
             .cors(cors -> cors.configurationSource(corsConfigurationSource))
-            // JWT 无状态推荐关闭 CSRF；如用 Session/Cookie，请保留 CSRF 并在前端携带 token
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // 预检请求必须放行
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                // 登录/公开接口/健康检查放行
-                .requestMatchers("/api/auth/login").permitAll()
+                .requestMatchers("/", "/index.html", "/favicon.ico", "/assets/**", "/static/**", "/error").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                // 其它需要认证
-                .anyRequest().authenticated()
+                .requestMatchers("/api/**").authenticated()
+                .anyRequest().permitAll()
             )
-            // JWT 过滤器放在用户名密码过滤器之前
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

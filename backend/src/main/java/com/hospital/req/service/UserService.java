@@ -3,6 +3,7 @@ package com.hospital.req.service;
 import com.hospital.req.dto.CreateUserRequest;
 import com.hospital.req.dto.LoginRequest;
 import com.hospital.req.dto.LoginResponse;
+import com.hospital.req.dto.UpdateSelfRequest;
 import com.hospital.req.dto.UpdateUserRequest; 
 import com.hospital.req.entity.Role;
 import com.hospital.req.entity.User;
@@ -44,7 +45,7 @@ public class UserService {
         User u = userRepo.findByEmployeeId(req.getEmployeeId()).orElseThrow();
         UserDetails ud = userDetailsService.loadUserByUsername(u.getEmployeeId());
         String token = jwtService.generateToken(ud);
-        return new LoginResponse(token, u.getName(), u.getRoles(), u.isMustChangePassword());
+        return new LoginResponse(token, u.getName(), u.getRoles(), u.isMustChangePassword(), u.getPhone());
     }
 
     public void changePassword(String employeeId, String oldPassword, String newPassword) {
@@ -66,8 +67,6 @@ public class UserService {
         User u = userRepo.findByEmployeeId(employeeId).orElseThrow();
         return u.getRoles().contains(Role.REVIEWER) || u.getRoles().contains(Role.ADMIN);
     }
-
-    // ================  管理员：新增用户 / 重置密码  ==========================
 
     public CreatedUserResult createUser(CreateUserRequest req) {
         userRepo.findByEmployeeId(req.getEmployeeId()).ifPresent(u -> {
@@ -143,4 +142,32 @@ public class UserService {
     return raw;
     }
     public record CreatedUserResult(Long id, String plainPassword, boolean usingDefault) {}
+
+    @Transactional
+    public record SelfUpdateResult(User user, boolean employeeIdChanged) {}
+
+    public User getByEmployeeId(String employeeId) {
+        return userRepo.findByEmployeeId(employeeId)
+                .orElseThrow(() -> new BadRequestException("用户不存在"));
+    }
+
+    @Transactional
+    public SelfUpdateResult updateSelf(String currentEmployeeId, UpdateSelfRequest req) {
+        User u = getByEmployeeId(currentEmployeeId);
+        boolean idChanged = false;
+
+        if (!u.getEmployeeId().equals(req.employeeId())) {
+            userRepo.findByEmployeeId(req.employeeId()).ifPresent(x -> {
+                throw new BadRequestException("工号已存在");
+            });
+            u.setEmployeeId(req.employeeId());
+            idChanged = true;
+        }
+
+        u.setName(req.name());
+        u.setDepartment(req.department());
+        userRepo.save(u);
+        return new SelfUpdateResult(u, idChanged);
+    }
+
 }

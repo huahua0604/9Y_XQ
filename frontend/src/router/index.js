@@ -6,11 +6,8 @@ const routes = [
 
   { path: '/login', name: 'login', component: () => import('../views/Login.vue'), meta: { public: true } },
   { path: '/change-password', name: 'changePwd', component: () => import('../views/ChangePassword.vue') },
-  // { path: '/403', name: 'forbidden', component: () => import('../views/Forbidden.vue'), meta: { public: true } },
-  // { path: '/:pathMatch(.*)*', name: 'notfound', component: () => import('../views/NotFound.vue'), meta: { public: true } },
-
+  { path: '/me', name: 'me', component: () => import('../views/UserCenter.vue') },
   { path: '/admin/users', name: 'admin-users', component: () => import('../views/Users.vue'), meta: { roles: ['ADMIN'] } },
-
   { path: '/my', name: 'my', component: () => import('../views/DemandList.vue') },
   { path: '/demands', name: 'demands', component: () => import('../views/DemandList.vue') },
   { path: '/demands/new', name: 'demand-new', component: () => import('../views/DemandForm.vue') },

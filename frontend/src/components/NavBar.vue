@@ -85,22 +85,14 @@
             >
               👋 {{ displayName || employeeId }}
             </button>
-            <ul
-              class="dropdown-menu dropdown-menu-end"
-              :class="{ show: userMenuOpen }"
-              aria-labelledby="userMenu"
-            >
-              <!-- <li>
-                <router-link class="dropdown-item" to="/profile" @click="closeUserMenu">
-                  个人中心
+            <ul class="dropdown-menu dropdown-menu-end" :class="{ show: userMenuOpen }" aria-labelledby="userMenu">
+              <!-- 新增：用户中心 -->
+              <li>
+                <router-link class="dropdown-item" to="/me" @click="closeUserMenu">
+                  用户中心
                 </router-link>
               </li>
-              <li>
-                <router-link class="dropdown-item" to="/change-password" @click="closeUserMenu">
-                  修改密码
-                </router-link>
-              </li> -->
-              <!-- <li><hr class="dropdown-divider"></li> -->
+              <li><hr class="dropdown-divider" /></li>
               <li>
                 <button class="dropdown-item text-danger" @click="onLogoutAndClose">
                   退出登录
@@ -127,12 +119,10 @@ const auth = useAuthStore()
 const { isAuthed, employeeId, displayName } = storeToRefs(auth)
 const hasAuthority = auth.hasAuthority
 
-// 折叠/下拉由 Vue 管理
 const navOpen = ref(false)
 const userMenuOpen = ref(false)
 
 function activeClass(prefix) {
-  // 兼容子路由：/my/xxx 也高亮
   return route.path.startsWith(prefix) ? 'active' : ''
 }
 function closeNav() { navOpen.value = false }
@@ -151,6 +141,5 @@ function onLogoutAndClose() {
 </script>
 
 <style scoped>
-/* 让品牌在深色背景下更清晰一些的小微调，可按需删除 */
 .navbar-brand { letter-spacing: .5px; }
 </style>

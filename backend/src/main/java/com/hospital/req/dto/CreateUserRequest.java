@@ -22,4 +22,7 @@ public class CreateUserRequest {
     private Set<String> roles;
 
     private Boolean mustChangePassword;
+
+    @Size(max=32) 
+    String phone;
 }

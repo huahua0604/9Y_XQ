@@ -19,8 +19,6 @@ import java.util.stream.Collectors;
 public class CorsConfig {
     @Value("${app.allow-origins:http://localhost:5173}")
     private String allowOriginsCsv;
-
-    /** 统一创建 CORS 配置对象 */
     private CorsConfiguration buildCfg() {
         CorsConfiguration cfg = new CorsConfiguration();
 
@@ -28,8 +26,6 @@ public class CorsConfig {
                 .map(String::trim)
                 .filter(StringUtils::hasText)
                 .collect(Collectors.toList());
-
-        // 当 allowCredentials=true 时，不允许使用通配符 * 作为具体 AllowedOrigin
         boolean usePatterns = items.stream().anyMatch(s -> s.contains("*"));
         if (usePatterns) {
             items.forEach(cfg::addAllowedOriginPattern);
@@ -37,16 +33,15 @@ public class CorsConfig {
             items.forEach(cfg::addAllowedOrigin);
         }
 
-        cfg.setAllowCredentials(true); // 若纯 JWT 无 Cookie，也可以设为 false
+        cfg.setAllowCredentials(true);
         cfg.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS","HEAD"));
         cfg.setAllowedHeaders(List.of("Authorization","Content-Type","Accept","X-Requested-With","Origin"));
         cfg.setExposedHeaders(List.of("Content-Disposition","Authorization","X-Total-Count"));
-        cfg.setMaxAge(3600L); // 预检缓存（秒）
+        cfg.setMaxAge(3600L);
 
         return cfg;
     }
 
-    /** 提供给 Spring Security 的 CorsConfigurationSource */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -54,7 +49,6 @@ public class CorsConfig {
         return source;
     }
 
-    /** 顶层 CorsFilter：保证异常/未命中过滤器链时也能写出 CORS 头 */
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public CorsFilter corsFilter() {

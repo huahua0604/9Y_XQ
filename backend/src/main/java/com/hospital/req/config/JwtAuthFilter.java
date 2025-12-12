@@ -35,7 +35,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             "/swagger-ui.html"
     );
 
-    /** 预检与白名单直接跳过，避免误拦导致 CORS 失败 */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
@@ -60,7 +59,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         try {
             username = jwtService.extractUsername(token);
         } catch (Exception ex) {
-            // token 解析失败：放行到后续链，交给异常处理/权限判断
             chain.doFilter(request, response);
             return;
         }
@@ -69,7 +67,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             UserDetails ud = userDetailsService.loadUserByUsername(username);
 
             if (jwtService.isTokenValid(token, ud)) {
-                // —— 关键：统一权限为无前缀（去掉 ROLE_），转大写：USER / REVIEWER / ADMIN
                 var normalizedAuths = ud.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
                         .filter(s -> s != null && !s.isBlank())

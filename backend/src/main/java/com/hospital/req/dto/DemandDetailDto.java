@@ -1,11 +1,8 @@
 package com.hospital.req.dto;
 
 import com.hospital.req.entity.RequestStatus;
-import com.hospital.req.entity.Priority;
 import lombok.Data;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -14,9 +11,7 @@ public class DemandDetailDto {
     private Long id;
     private String title;
     private String category;
-    private Priority priority;
-    private LocalDate desiredDueDate;
-    private BigDecimal budgetEstimate;
+
     private String impactScope;
     private String relatedSystems;
     private String contactPhone;

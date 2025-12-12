@@ -1,68 +1,56 @@
 import axios from 'axios'
 import { useAuthStore } from '../store/auth'
 
+function resolveBaseURL() {
+  const raw = (import.meta.env.VITE_API_BASE_URL || '').trim()
+  if (!raw) return ''
+  return raw.replace(/\/+$/, '')
+}
+
+const baseURL = resolveBaseURL()
+
+console.log('[Axios] baseURL =', baseURL)
+
 const http = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:6060',
-  timeout: 15000
+  baseURL,
+  timeout: 15000,
 })
 
 http.interceptors.request.use(cfg => {
   try {
     const auth = useAuthStore()
-    if (auth?.token) cfg.headers.Authorization = `Bearer ${auth.token}`
-  } catch (_) {
+    const token =
+      auth?.token ??
+      (JSON.parse(localStorage.getItem('auth/v1') || '{}').token)
+    if (token) cfg.headers.Authorization = `Bearer ${token}`
+  } catch (err) {
+    console.error('[Axios Request Error]', err)
   }
   return cfg
 })
 
 http.interceptors.response.use(
   r => r,
-  async e => {
-    const res = e?.response
-    const cfg = e?.config || {}
-    const method = (cfg.method || 'GET').toUpperCase()
-    const url = cfg.url || ''
+  async err => {
+    const res = err?.response
     const status = res?.status || 0
-
-    let data = res?.data
-    if (data instanceof Blob) {
-      try { data = JSON.parse(await data.text()) } catch {}
-    }
-
-    const msg = (data && (data.message || data.error || data.msg)) || e.message || '请求失败'
-    const errId = data?.errorId ? `（错误号: ${data.errorId}）` : ''
-
-    console.error(`[API ${method} ${url}] ${status}`, data || e)
 
     if (status === 401) {
       try {
         const auth = useAuthStore()
-        if (typeof auth.clear === 'function') auth.clear()
-        else if (typeof auth.logout === 'function') auth.logout()
+        if (typeof auth?.clear === 'function') auth.clear()
+        else if (typeof auth?.logout === 'function') auth.logout()
       } catch {}
-      const back = encodeURIComponent(location.pathname + location.search)
-      location.assign(`/login?redirect=${back}`)
-    } else if (status === 403) {
-      alert(`无权限访问：${method} ${url}。${errId}`)
-    } else if (status >= 500) {
-      alert(`服务器内部错误。${errId}`)
-    } else {
-      alert(`${msg}${errId}`)
+      const redirect = encodeURIComponent(location.pathname + location.search)
+      if (!location.pathname.startsWith('/login')) {
+        location.assign(`/login?redirect=${redirect}`)
+      }
+      return
     }
 
-    return Promise.reject(e)
+    console.error('[Axios Error]', status, res?.data || err)
+    return Promise.reject(err)
   }
 )
-
-function safeReadToken(){
-  try { const { useAuthStore } = require('../store/auth'); const a = useAuthStore(); if (a?.token) return a.token } catch {}
-  try { const raw = localStorage.getItem('auth/v1'); if (raw) return JSON.parse(raw).token || '' } catch {}
-  return ''
-}
-http.interceptors.request.use(cfg => {
-  const t = safeReadToken()
-  if (t) cfg.headers.Authorization = `Bearer ${t}`
-  return cfg
-})
 
 export default http

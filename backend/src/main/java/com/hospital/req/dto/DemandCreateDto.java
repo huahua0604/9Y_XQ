@@ -1,30 +1,25 @@
 package com.hospital.req.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.hospital.req.entity.Priority;
+import jakarta.persistence.Column;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
 
 @Data
 public class DemandCreateDto {
     @NotBlank
     private String title;
-    
+
+    @NotBlank
     private String category;
-    private Priority priority;
-
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate desiredDueDate;
-
-    private BigDecimal budgetEstimate;
+    
     private String impactScope;
     private String relatedSystems;
     private String contactPhone;
     private String location;
+
+    @Column(columnDefinition = "MEDIUMTEXT")
     private String description;
-    private boolean submit; // true=立即提交；false=保存草稿
+
+    private boolean submit;
 }
 

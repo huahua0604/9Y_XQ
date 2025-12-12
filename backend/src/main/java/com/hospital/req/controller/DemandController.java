@@ -3,10 +3,14 @@ package com.hospital.req.controller;
 import com.hospital.req.dto.CommentDto;
 import com.hospital.req.dto.DemandCreateDto;
 import com.hospital.req.dto.DemandDetailDto;
+import com.hospital.req.dto.TitleUpdateDto;
 import com.hospital.req.entity.*;
 import com.hospital.req.repo.UserRepository;
 import com.hospital.req.service.DemandService;
+
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 
 import com.hospital.req.repo.ApprovalCommentRepository;
 
@@ -21,6 +25,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/demands")
@@ -95,6 +100,15 @@ public class DemandController {
         return toDetail(r);
     }
 
+    @PutMapping("/{id}/title")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public DemandDetailDto updateTitle(@PathVariable Long id,
+                                       @Valid @RequestBody TitleUpdateDto dto,
+                                       Authentication auth) {
+        var r = service.updateTitle(id, empId(auth), dto.title());
+        return toDetail(r);
+    }
+
     @PostMapping("/{id}/comments")
     @PreAuthorize("hasAnyAuthority('USER','ADMIN','REVIEWER')")
     public Object addComment(@PathVariable Long id, @RequestBody CommentDto dto, Authentication auth) {
@@ -109,9 +123,11 @@ public class DemandController {
     public Object upload(@PathVariable Long id,
                          @RequestPart("file") MultipartFile file,
                          @RequestPart(value="occurredAt", required=false) String occurredAt,
+                         @RequestPart(value="note", required=false) String note,
                          Authentication auth) throws Exception {
-        var at = service.uploadAttachment(id, empId(auth), file,
-                occurredAt == null ? null : LocalDateTime.parse(occurredAt));
+            var at = service.uploadAttachment(id, empId(auth), file,
+                occurredAt == null ? null : LocalDateTime.parse(occurredAt),
+                note);
         return at.getId();
     }
 
@@ -120,9 +136,6 @@ public class DemandController {
         d.setId(r.getId());
         d.setTitle(r.getTitle());
         d.setCategory(r.getCategory());
-        d.setPriority(r.getPriority());
-        d.setDesiredDueDate(r.getDesiredDueDate());
-        d.setBudgetEstimate(r.getBudgetEstimate());
         d.setStatus(r.getStatus());
         d.setCreatedAt(r.getCreatedAt());
         d.setSubmittedAt(r.getSubmittedAt());
@@ -203,6 +216,88 @@ public class DemandController {
         commentRepo.save(c);
         service.addHistory(c.getRequest(), c.getAuthor(), HistoryAction.COMMENT_DELETED, c.getContent(), c, null);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/complete")
+    @PreAuthorize("hasAnyRole('ADMIN','REVIEWER')")
+    public DemandDetailDto markCompleted(@PathVariable Long id,
+                                         @RequestBody(required = false) Map<String, String> body,
+                                         Authentication auth) {
+        String actorEmpId = auth.getName();
+        String note = body != null ? body.getOrDefault("note", "") : "";
+        return toDetail(service.markCompleted(id, actorEmpId, note));
+    }
+
+    /** 2) 撤销整体完成（恢复到 REVIEW_APPROVED） */
+    @PostMapping("/{id}/complete/undo")
+    @PreAuthorize("hasAnyRole('ADMIN','REVIEWER')")
+    public DemandDetailDto unmarkCompleted(@PathVariable Long id,
+                                           @RequestBody(required = false) Map<String, String> body,
+                                           Authentication auth) {
+        String actorEmpId = auth.getName();
+        String note = body != null ? body.getOrDefault("note", "") : "";
+        return toDetail(service.unmarkCompleted(id, actorEmpId, note));
+    }
+
+    /** 3) 周完成（周报）——申请人/管理员/科室均可 */
+    @PostMapping("/{id}/done/week")
+    @PreAuthorize("hasAnyRole('ADMIN','REVIEWER')")
+    public DemandDetailDto markWeekDone(@PathVariable Long id,
+                                        @RequestBody Map<String, String> body,
+                                        Authentication auth) {
+        String actorEmpId = auth.getName();
+        String key   = body.get("key");   // 形如 "2025-W48"
+        String label = body.getOrDefault("label", key);
+        return toDetail(service.markWeekDone(id, actorEmpId, key, label));
+    }
+
+    /** 4) 撤销周完成（按 key 撤销） */
+    @PostMapping("/{id}/done/week/undo")
+    @PreAuthorize("hasAnyRole('ADMIN','REVIEWER')")
+    public DemandDetailDto unmarkWeekDone(@PathVariable Long id,
+                                          @RequestBody Map<String, String> body,
+                                          Authentication auth) {
+        String actorEmpId = auth.getName();
+        String key   = body.get("key");
+        String label = body.getOrDefault("label", key);
+        return toDetail(service.unmarkWeekDone(id, actorEmpId, key, label));
+    }
+
+    /** 5) 月完成（月报）——申请人/管理员/科室均可 */
+    @PostMapping("/{id}/done/month")
+    @PreAuthorize("hasAnyRole('ADMIN','REVIEWER')")
+    public DemandDetailDto markMonthDone(@PathVariable Long id,
+                                         @RequestBody Map<String, String> body,
+                                         Authentication auth) {
+        String actorEmpId = auth.getName();
+        String key   = body.get("key");   // 形如 "2025-11"
+        String label = body.getOrDefault("label", key);
+        return toDetail(service.markMonthDone(id, actorEmpId, key, label));
+    }
+
+    /** 6) 撤销月完成（按 key 撤销） */
+    @PostMapping("/{id}/done/month/undo")
+    @PreAuthorize("hasAnyRole('ADMIN','REVIEWER')")
+    public DemandDetailDto unmarkMonthDone(@PathVariable Long id,
+                                           @RequestBody Map<String, String> body,
+                                           Authentication auth) {
+        String actorEmpId = auth.getName();
+        String key   = body.get("key");
+        String label = body.getOrDefault("label", key);
+        return toDetail(service.unmarkMonthDone(id, actorEmpId, key, label));
+    }
+    @Data
+    public static class SmsTemplateDto {
+        private String content;
+    }
+
+    @PostMapping("/{id}/sms/notify")
+    @PreAuthorize("hasAnyRole('ADMIN','REVIEWER')")
+    public Map<String,Object> notifySms(@PathVariable Long id,
+                                        @RequestBody SmsTemplateDto dto,
+                                        Authentication auth) {
+        String resp = service.sendTemplateSms(id, empId(auth), dto.getContent());
+        return Map.of("ok", true, "resp", resp);
     }
 
 }
